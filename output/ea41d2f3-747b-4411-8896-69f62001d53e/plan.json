@@ -1,0 +1,49 @@
+{
+  "id": "a29cd0ae-b9d5-4723-be69-655a9f47f3f3",
+  "formatType": "problem_solution",
+  "caseType": "dog-bite",
+  "platform": "tiktok",
+  "audienceTemp": "cold",
+  "tone": "empathetic",
+  "clipStructure": [
+    5,
+    10
+  ],
+  "totalDuration": 15,
+  "scenes": [
+    {
+      "clipIndex": 0,
+      "duration": 5,
+      "primitive": "pattern_interrupt",
+      "visualPrompt": "A shaking chain-link fence in a suburban backyard, implying an aggressive dog on the other side, medium-wide shot, overcast afternoon light, tense atmosphere, camera slightly handheld for realism --ar 9:16 --v 5 --q 2 Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "DOG ATTACK?",
+      "overlayPosition": "top",
+      "showLogo": false,
+      "videoSource": "text",
+      "transition": "cut"
+    },
+    {
+      "clipIndex": 1,
+      "duration": 10,
+      "primitive": "pain_point",
+      "visualPrompt": "A worried parent sitting on porch steps in a Cincinnati neighborhood, holding a bandaged arm, looking distressed, medium-wide shot, soft afternoon light, residential setting with houses in the background, camera slightly handheld for realism --ar 9:16 --v 5 --q 2 Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "SCARRED. SCARED. STUCK WITH BILLS.",
+      "overlayPosition": "center",
+      "ctaText": "Link in bio for help",
+      "showLogo": true,
+      "videoSource": "text",
+      "transition": "fade"
+    }
+  ],
+  "audio": {
+    "source": "elevenlabs",
+    "voiceId": "cgSgspJ2msm6clMCkdW9",
+    "voiceName": "Jessica - Playful, Bright, Warm",
+    "script": "Got bit by a dog in Cincinnati? You're hurt. Scared. Stuck with medical bills. Young Injury Law fights for you. We've won thousands for dog bite victims. Don't wait. Check the link in bio now.",
+    "musicMood": "dramatic"
+  },
+  "disclaimer": "Prior results do not guarantee a similar outcome. Free consultation.",
+  "firmName": "Young Injury Law",
+  "phoneNumber": "5136335502",
+  "locality": "Cincinnati, Oh"
+}

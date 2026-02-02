@@ -1,0 +1,49 @@
+{
+  "id": "700e2707-f929-49f7-86d5-bd8c3629c823",
+  "formatType": "hook",
+  "caseType": "car-accident",
+  "platform": "instagram",
+  "audienceTemp": "cold",
+  "tone": "urgent",
+  "clipStructure": [
+    5,
+    10
+  ],
+  "totalDuration": 15,
+  "scenes": [
+    {
+      "clipIndex": 0,
+      "duration": 5,
+      "primitive": "pattern_interrupt",
+      "visualPrompt": "Dramatic slow-motion shot of car headlights glaring through heavy rain at night, approaching fast, water droplets on the lens, cinematic 120fps, medium-wide angle, dark and moody atmosphere, realistic lighting with high contrast, --v 5 --ar 9:16 --q 2 Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "CAR CRASH?",
+      "overlayPosition": "top",
+      "showLogo": false,
+      "videoSource": "text",
+      "transition": "cut"
+    },
+    {
+      "clipIndex": 1,
+      "duration": 10,
+      "primitive": "pain_point",
+      "visualPrompt": "A stressed person sitting in a dimly lit living room at night, staring at a pile of medical bills and crumpled insurance forms on a coffee table, hands rubbing temples, medium-wide shot from across the room, soft warm 3200K lighting with shadows, realistic textures and clutter, --v 5 --ar 9:16 --q 2 Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "BILLS PILING UP? INSURANCE IGNORING YOU?",
+      "overlayPosition": "center",
+      "ctaText": "Link in Bio - Free Consultation",
+      "showLogo": true,
+      "videoSource": "text",
+      "transition": "fade"
+    }
+  ],
+  "audio": {
+    "source": "elevenlabs",
+    "voiceId": "TX3LPaxmHKxFdv7VOQHJ",
+    "voiceName": "Liam - Energetic, Social Media Creator",
+    "script": "Got hit in a crash? Bills piling up fast. Insurance won't help. You're not alone. Young Injury Law in Cincinnati fights for you. We’ve won millions. Don’t wait. Check the link in bio now.",
+    "musicMood": "dramatic"
+  },
+  "disclaimer": "Prior results do not guarantee a similar outcome. Free consultation.",
+  "firmName": "Young Injury Law",
+  "phoneNumber": "5136335502",
+  "locality": "Cincinnati, Oh"
+}

@@ -1,0 +1,49 @@
+{
+  "id": "5f09d5e7-c6dd-4465-8296-1b9bcc199373",
+  "formatType": "ugc",
+  "caseType": "car-accident",
+  "platform": "instagram",
+  "audienceTemp": "cold",
+  "tone": "empathetic",
+  "clipStructure": [
+    15,
+    5
+  ],
+  "totalDuration": 20,
+  "scenes": [
+    {
+      "clipIndex": 0,
+      "duration": 15,
+      "primitive": "pain_point",
+      "visualPrompt": "A rainy night in Cincinnati, a person sitting in a damaged car at an intersection, airbag deployed, looking shaken but not injured, emergency lights flashing in the background, filmed from outside the driver’s side window in a medium-wide shot, handheld camera with slight shake for authenticity, realistic wet pavement reflections, cinematic 3200K lighting --ar 9:16 --v 6 --q 2 --style raw --ugc-style Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "JUST GOT IN A CRASH?",
+      "overlayPosition": "top",
+      "showLogo": false,
+      "videoSource": "text",
+      "transition": "cut"
+    },
+    {
+      "clipIndex": 1,
+      "duration": 5,
+      "primitive": "cta",
+      "visualPrompt": "A person walking with their family along the Ohio Riverfront in Cincinnati at sunset, medium-wide shot, relaxed and smiling, handheld camera with natural framing imperfections, warm golden hour light casting long shadows, realistic grass and water textures --ar 9:16 --v 6 --q 2 --style raw --ugc-style Render as live-action footage with natural skin texture, realistic motion blur, practical lighting, slight handheld micro-movement, and subtle real-camera imperfections. Avoid CGI look, glossy AI artifacts, extra fingers, warped text, and surreal objects.",
+      "textOverlay": "YOUNG INJURY LAW FIGHTS FOR YOU!",
+      "overlayPosition": "center",
+      "ctaText": "Link in Bio for Free Case Review",
+      "showLogo": true,
+      "videoSource": "text",
+      "transition": "fade"
+    }
+  ],
+  "audio": {
+    "source": "elevenlabs",
+    "voiceId": "iP95p4xoKVk53GoZ742B",
+    "voiceName": "Chris - Charming, Down-to-Earth",
+    "script": "Got hit in a car crash? I’ve been there. The pain, the bills, insurance ignoring you. It’s frustrating. But Young Injury Law in Cincinnati got my back. They fought hard, got me $200,000 when insurance offered pennies. Don’t wait. Click the link in bio now for your free case review.",
+    "musicMood": "hopeful"
+  },
+  "disclaimer": "Prior results do not guarantee a similar outcome. Free consultation.",
+  "firmName": "Young Injury Law",
+  "phoneNumber": "5136335502",
+  "locality": "Cincinnati, Oh"
+}
