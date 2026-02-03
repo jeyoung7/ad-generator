@@ -71,3 +71,48 @@ export default defineConfig([
   },
 ])
 ```
+
+## Remotion Word-By-Word Captions (TikTok Template)
+
+This app now supports a caption mode from the UI:
+- `Caption Mode` -> `Add Remotion animated word-by-word captions`
+- Styles: `impact`, `clean`, `kinetic`
+
+The server will call a Remotion project after rendering the reel.
+Captioning is now the default for both `/api/generate` and `/api/generate-from-plan`.
+To disable for a request, send `captionMode: "none"`.
+
+### 1) Create Remotion TikTok project
+
+```bash
+npx create-video@latest --tiktok
+```
+
+Set `REMOTION_TIKTOK_DIR` to that project path (or place it at `./remotion-template-tiktok`).
+
+### 2) Add a bridge script in the Remotion project
+
+In the Remotion project's `package.json`, add:
+
+```json
+{
+  "scripts": {
+    "caption:video": "node scripts/caption-video.mjs"
+  }
+}
+```
+
+That script must accept CLI args:
+- `--input <path>`
+- `--output <path>`
+- `--style impact|clean|kinetic`
+
+### 3) Run this app
+
+When `/api/generate-from-plan` receives `captionMode: "remotion-word"`, it will run:
+
+```bash
+npm --prefix <REMOTION_TIKTOK_DIR> run caption:video -- --input ... --output ... --style ...
+```
+
+If Remotion is not configured, generation still succeeds and returns the non-captioned reel.

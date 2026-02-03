@@ -17,7 +17,7 @@ export const rideshareAccident: AdTemplate = {
     },
     {
       prompt:
-        'Medium close-up, 85mm prime lens f/1.8. Sharp attorney in a tailored professional suit, leaning slightly forward, speaking to camera with intensity and conviction. Hyperrealistic skin detail, focused eyes. Sleek modern office with {city} city lights visible through floor-to-ceiling windows at night. Warm 3200K key light, dramatic contrast. Slow dolly in. Shallow depth of field. Photorealistic, cinematic color grade.',
+        'Medium close-up, 85mm prime lens f/1.8. Sharp attorney in a tailored professional suit, leaning slightly forward, speaking to camera with intensity and conviction. Hyperrealistic skin detail, focused eyes. Sleek modern office with a recognizable {city} street intersection and storefront signage visible through floor-to-ceiling windows at night. Warm 3200K key light, dramatic contrast. Slow dolly in. Shallow depth of field. Photorealistic, cinematic color grade.',
       duration: 5,
       source: 'selfie',
       overlay: {

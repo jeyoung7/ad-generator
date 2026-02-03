@@ -45,6 +45,34 @@ function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+const HERO_FONT_STACK = '"Arial Black","Impact",sans-serif';
+
+function emphasizeOverlayText(text: string): string {
+  return normalizeWhitespace(text).toUpperCase();
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void {
+  const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
 function splitLongToken(
   ctx: CanvasRenderingContext2D,
   token: string,
@@ -137,7 +165,7 @@ function fitTextBlock(
   const step = 2;
 
   for (let size = opts.preferredFontSize; size >= opts.minFontSize; size -= step) {
-    ctx.font = `bold ${size}px sans-serif`;
+    ctx.font = `900 ${size}px ${HERO_FONT_STACK}`;
     const lines = wrapText(ctx, text, opts.maxWidth);
     const lineHeight = Math.ceil(size * 1.22);
     const totalHeight = lines.length * lineHeight;
@@ -148,7 +176,7 @@ function fitTextBlock(
   }
 
   const fallbackSize = opts.minFontSize;
-  ctx.font = `bold ${fallbackSize}px sans-serif`;
+  ctx.font = `900 ${fallbackSize}px ${HERO_FONT_STACK}`;
   const lines = wrapText(ctx, text, opts.maxWidth);
   const limited = lines.slice(0, opts.maxLines);
   if (lines.length > opts.maxLines && limited.length > 0) {
@@ -176,19 +204,33 @@ function drawTextBlock(
 ): void {
   if (lines.length === 0) return;
 
-  ctx.font = `bold ${opts.fontSize}px sans-serif`;
+  ctx.font = `900 ${opts.fontSize}px ${HERO_FONT_STACK}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = 'rgba(0,0,0,0.95)';
   ctx.fillStyle = opts.color;
-  ctx.lineWidth = Math.max(3, Math.round(opts.fontSize * 0.11));
+  ctx.lineWidth = Math.max(4, Math.round(opts.fontSize * 0.14));
 
   const startY = opts.centerY - ((lines.length - 1) * opts.lineHeight) / 2;
   for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const y = startY + i * opts.lineHeight;
-    ctx.strokeText(lines[i], opts.centerX, y);
-    ctx.fillText(lines[i], opts.centerX, y);
+    const lineWidth = ctx.measureText(line).width;
+    const paddingX = Math.max(14, Math.round(opts.fontSize * 0.28));
+    const paddingY = Math.max(6, Math.round(opts.fontSize * 0.12));
+    const boxW = lineWidth + paddingX * 2;
+    const boxH = opts.lineHeight + paddingY;
+    const boxX = opts.centerX - boxW / 2;
+    const boxY = y - boxH / 2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    drawRoundedRect(ctx, boxX, boxY, boxW, boxH, Math.round(opts.fontSize * 0.18));
+    ctx.fill();
+
+    ctx.fillStyle = opts.color;
+    ctx.strokeText(line, opts.centerX, y);
+    ctx.fillText(line, opts.centerX, y);
   }
 }
 
@@ -201,6 +243,7 @@ function renderTextOverlayPng(
   textOverlays: TextOverlay[],
   width: number,
   height: number,
+  logoReservedTopPx: number,
   ctaText?: string,
   disclaimer?: string
 ): void {
@@ -210,20 +253,25 @@ function renderTextOverlayPng(
   ctx.clearRect(0, 0, width, height);
 
   const textMaxWidth = Math.floor(width * 0.84);
+  const topRegionCenter = Math.max(
+    Math.round(height * 0.18),
+    logoReservedTopPx + Math.round(height * 0.08)
+  );
   const positionRegions: Record<TextOverlay['position'], { centerY: number; maxHeight: number }> = {
-    top: { centerY: Math.round(height * 0.18), maxHeight: Math.round(height * 0.24) },
+    top: { centerY: topRegionCenter, maxHeight: Math.round(height * 0.2) },
     center: { centerY: Math.round(height * 0.5), maxHeight: Math.round(height * 0.34) },
     bottom: { centerY: Math.round(height * 0.76), maxHeight: Math.round(height * 0.23) },
   };
 
   for (const overlay of textOverlays) {
+    const emphaticText = emphasizeOverlayText(overlay.text);
     const region = positionRegions[overlay.position] ?? positionRegions.center;
-    const fit = fitTextBlock(ctx, overlay.text, {
-      preferredFontSize: overlay.fontSize || Math.max(40, Math.round(height * 0.03)),
-      minFontSize: Math.max(24, Math.round(height * 0.017)),
+    const fit = fitTextBlock(ctx, emphaticText, {
+      preferredFontSize: overlay.fontSize || Math.max(58, Math.round(height * 0.04)),
+      minFontSize: Math.max(30, Math.round(height * 0.022)),
       maxWidth: textMaxWidth,
       maxHeight: region.maxHeight,
-      maxLines: 4,
+      maxLines: 3,
     });
 
     drawTextBlock(ctx, fit.lines, {
@@ -340,6 +388,10 @@ export async function composeScene(opts: OverlayOptions): Promise<string> {
 
   const hasText = textOverlays.length > 0 || ctaText || disclaimer;
   const hasLogo = logoPath && fs.existsSync(logoPath);
+  const clampedScale = Math.max(0.75, Math.min(2.25, logoScale));
+  const logoWidth = Math.max(100, Math.round(width * 0.14 * clampedScale));
+  const margin = Math.max(30, Math.round(width * 0.04));
+  const logoReservedTopPx = hasLogo ? margin + logoWidth + margin : 0;
 
   if (!hasText && !hasLogo) {
     if (!isImage) {
@@ -363,7 +415,15 @@ export async function composeScene(opts: OverlayOptions): Promise<string> {
   let textPngPath: string | null = null;
   if (hasText) {
     textPngPath = path.join(jobDir, `text_${uuid()}.png`);
-    renderTextOverlayPng(textPngPath, textOverlays, width, height, ctaText, disclaimer);
+    renderTextOverlayPng(
+      textPngPath,
+      textOverlays,
+      width,
+      height,
+      logoReservedTopPx,
+      ctaText,
+      disclaimer
+    );
   }
 
   const inputs: string[] = [videoInput];
@@ -382,9 +442,6 @@ export async function composeScene(opts: OverlayOptions): Promise<string> {
   }
 
   if (hasLogo) {
-    const clampedScale = Math.max(0.75, Math.min(2.25, logoScale));
-    const logoWidth = Math.max(100, Math.round(width * 0.14 * clampedScale));
-    const margin = Math.max(30, Math.round(width * 0.04));
     inputs.push(logoPath!);
     filterParts.push(`[${inputIdx}:v]scale=${logoWidth}:-1[logo]`);
     filterParts.push(`${currentStream}[logo]overlay=x=${margin}:y=${margin}[final]`);
@@ -585,6 +642,44 @@ export async function extractAudioTrack(
       .output(outputPath)
       .on('start', (cmdline: string) => console.log('[ffmpeg extract-audio]', cmdline))
       .on('stderr', (line: string) => console.log('[ffmpeg extract-audio stderr]', line))
+      .on('end', () => resolve())
+      .on('error', (err: Error) => reject(err))
+      .run();
+  });
+
+  return outputPath;
+}
+
+/**
+ * Clean and normalize a spoken-word track for clearer attorney narration.
+ */
+export async function cleanSpeechTrack(
+  inputAudioPath: string,
+  outputDir: string
+): Promise<string> {
+  const outputPath = path.join(outputDir, `voice_clean_${uuid()}.mp3`);
+
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(inputAudioPath)
+      .outputOptions([
+        '-vn',
+        '-c:a', 'libmp3lame',
+        '-ar', '44100',
+        '-ac', '1',
+        '-b:a', '192k',
+        '-af',
+        [
+          'highpass=f=80',
+          'lowpass=f=8000',
+          'afftdn=nf=-22',
+          'acompressor=threshold=-18dB:ratio=3:attack=5:release=80',
+          'loudnorm=I=-16:TP=-1.5:LRA=11',
+        ].join(','),
+      ])
+      .output(outputPath)
+      .on('start', (cmdline: string) => console.log('[ffmpeg clean-speech]', cmdline))
+      .on('stderr', (line: string) => console.log('[ffmpeg clean-speech stderr]', line))
       .on('end', () => resolve())
       .on('error', (err: Error) => reject(err))
       .run();

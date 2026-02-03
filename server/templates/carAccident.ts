@@ -16,7 +16,7 @@ export const carAccident: AdTemplate = {
     },
     {
       prompt:
-        'Medium close-up, 85mm prime lens f/2.0. Professional attorney in a sharp tailored navy suit, speaking directly to camera with calm authority. Hyperrealistic skin detail, micro-expressions of empathy. Modern corner office, warm 3200K key light from left, soft fill from window. Slow dolly in over 5 seconds. Shallow depth of field, bokeh from city lights behind. Photorealistic, cinematic color grade.',
+        'Medium close-up, 85mm prime lens f/2.0. Professional attorney in a sharp tailored navy suit, speaking directly to camera with calm authority. Hyperrealistic skin detail, micro-expressions of empathy. Modern corner office, warm 3200K key light from left, soft fill from window. Slow dolly in over 5 seconds. Shallow depth of field, bokeh from neighborhood streetlights behind. Photorealistic, cinematic color grade.',
       duration: 5,
       source: 'selfie',
       overlay: {

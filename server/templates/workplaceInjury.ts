@@ -37,7 +37,7 @@ export const workplaceInjury: AdTemplate = {
     },
     {
       prompt:
-        'Aerial drone shot, wide lens. Slowly descending toward {city} downtown at golden hour. Camera pushes toward a single illuminated office building. Warm 2800K tones, dramatic cloud formations, cinematic horizontal lens flare, anamorphic bokeh. Photorealistic, premium color grade.',
+        'Street-level tracking shot, 35mm wide lens. Moving along a recognizable {city} suburban office park at golden hour. Camera pushes toward a single illuminated office building beside local businesses. Warm 2800K tones, dramatic cloud formations, cinematic horizontal lens flare, anamorphic bokeh. Photorealistic, premium color grade.',
       duration: 5,
       source: 'text',
       overlay: {

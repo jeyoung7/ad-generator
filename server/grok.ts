@@ -70,17 +70,29 @@ function sleep(ms: number) {
 /**
  * Download a video from a URL to a local file.
  */
-async function downloadVideo(videoUrl: string, outputDir: string): Promise<VideoResult> {
+async function downloadVideo(videoUrl: string, outputDir: string, retries = 3): Promise<VideoResult> {
   const filename = `${uuid()}.mp4`;
   const filePath = path.join(outputDir, filename);
 
-  const res = await fetch(videoUrl);
-  if (!res.ok) throw new Error(`Failed to download video: ${res.status}`);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(videoUrl, {
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!res.ok) throw new Error(`Failed to download video: ${res.status}`);
 
-  const arrBuf = await res.arrayBuffer();
-  fs.writeFileSync(filePath, Buffer.from(arrBuf));
+      const arrBuf = await res.arrayBuffer();
+      fs.writeFileSync(filePath, Buffer.from(arrBuf));
 
-  return { filePath, url: `/output/${filename}` };
+      return { filePath, url: `/output/${filename}` };
+    } catch (err) {
+      console.warn(`[grok] Download attempt ${attempt}/${retries} failed:`, (err as Error).message);
+      if (attempt === retries) throw err;
+      await sleep(3000 * attempt);
+    }
+  }
+
+  throw new Error('Download failed after retries');
 }
 
 /**

@@ -26,6 +26,34 @@ interface AdPlan {
 }
 
 type Step = 'configure' | 'plan' | 'generate';
+type CaptionStyle = 'impact' | 'clean' | 'kinetic';
+
+type PipelineStage =
+  | 'uploading'
+  | 'generating-scenes'
+  | 'composing'
+  | 'audio'
+  | 'captions'
+  | 'done';
+
+const PIPELINE_STAGES: { id: PipelineStage; label: string }[] = [
+  { id: 'uploading', label: 'Uploading assets' },
+  { id: 'generating-scenes', label: 'Generating scenes' },
+  { id: 'composing', label: 'Composing video' },
+  { id: 'audio', label: 'Mixing audio' },
+  { id: 'captions', label: 'Applying captions (Remotion)' },
+  { id: 'done', label: 'Complete' },
+];
+
+function inferStage(message: string): PipelineStage {
+  const m = message.toLowerCase();
+  if (m.includes('upload')) return 'uploading';
+  if (m.includes('remotion') || m.includes('caption')) return 'captions';
+  if (m.includes('narration') || m.includes('music') || m.includes('audio') || m.includes('voice')) return 'audio';
+  if (m.includes('generating') || m.includes('scene')) return 'generating-scenes';
+  if (m.includes('compos') || m.includes('concat')) return 'composing';
+  return 'generating-scenes';
+}
 
 export default function App() {
   // Config state
@@ -40,6 +68,8 @@ export default function App() {
   // Assets
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [selfieUrls, setSelfieUrls] = useState<string[]>([]);
+  const [useWordCaptions, setUseWordCaptions] = useState(true);
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('impact');
 
   // Plan & generation state
   const [plan, setPlan] = useState<AdPlan | null>(null);
@@ -48,6 +78,7 @@ export default function App() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [currentStage, setCurrentStage] = useState<PipelineStage | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [sceneUrls, setSceneUrls] = useState<string[]>([]);
 
@@ -108,6 +139,9 @@ export default function App() {
           logoUrl: logoUrl || undefined,
           selfieUrl: selfieUrls[0] || undefined,
           selfieUrls,
+          sequentialScenes: true,
+          captionMode: useWordCaptions ? 'remotion-word' : 'none',
+          captionStyle: useWordCaptions ? captionStyle : undefined,
         }),
       });
 
@@ -144,6 +178,7 @@ export default function App() {
 
           if (event.type === 'status') {
             setStatusMessage(event.message);
+            setCurrentStage(inferStage(event.message));
           } else if (event.type === 'scene') {
             setSceneUrls((prev) => {
               const next = [...prev];
@@ -151,12 +186,15 @@ export default function App() {
               return next;
             });
             setStatusMessage(`Scene ${event.index + 1} complete (${event.duration}s ${event.primitive})`);
+            setCurrentStage('generating-scenes');
           } else if (event.type === 'complete') {
             setVideoUrl(event.url);
             setStatusMessage(null);
+            setCurrentStage('done');
           } else if (event.type === 'error') {
             setError(event.details || 'Generation failed');
             setStatusMessage(null);
+            setCurrentStage(null);
           }
         }
       }
@@ -174,6 +212,7 @@ export default function App() {
     setSceneUrls([]);
     setError(null);
     setStatusMessage(null);
+    setCurrentStage(null);
   }
 
   function handleBackToPlan() {
@@ -182,6 +221,7 @@ export default function App() {
     setSceneUrls([]);
     setError(null);
     setStatusMessage(null);
+    setCurrentStage(null);
   }
 
   const canPlan = !!caseType;
@@ -252,6 +292,34 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-semibold mb-2">Caption Mode</h2>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={useWordCaptions}
+                      onChange={(e) => setUseWordCaptions(e.target.checked)}
+                    />
+                    Add Remotion animated word-by-word captions
+                  </label>
+                  {useWordCaptions && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Caption Style
+                      </label>
+                      <select
+                        value={captionStyle}
+                        onChange={(e) => setCaptionStyle(e.target.value as CaptionStyle)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="impact">Impact</option>
+                        <option value="clean">Clean</option>
+                        <option value="kinetic">Kinetic</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleCreatePlan}
                   disabled={!canPlan || planning}
@@ -305,15 +373,49 @@ export default function App() {
                   &larr; Back to plan
                 </button>
 
-                {statusMessage && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700 flex items-center gap-2">
-                    {generating && (
-                      <svg className="animate-spin h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
+                {(generating || currentStage === 'done') && (
+                  <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Pipeline</h3>
+                    <div className="space-y-1">
+                      {PIPELINE_STAGES.filter((s) => useWordCaptions || s.id !== 'captions').map((stage) => {
+                        const stageIdx = PIPELINE_STAGES.findIndex((s) => s.id === stage.id);
+                        const currentIdx = currentStage ? PIPELINE_STAGES.findIndex((s) => s.id === currentStage) : -1;
+                        const isActive = stage.id === currentStage && currentStage !== 'done';
+                        const isComplete = currentIdx > stageIdx || currentStage === 'done';
+
+                        return (
+                          <div
+                            key={stage.id}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive
+                                ? 'bg-blue-50 text-blue-700 font-medium'
+                                : isComplete
+                                ? 'text-green-700'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {isActive ? (
+                              <svg className="animate-spin h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : isComplete ? (
+                              <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            ) : (
+                              <div className="h-4 w-4 flex-shrink-0 rounded-full border-2 border-gray-300" />
+                            )}
+                            {stage.label}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {statusMessage && currentStage !== 'done' && (
+                      <div className="text-xs text-gray-500 px-3 pt-1 border-t border-gray-100">
+                        {statusMessage}
+                      </div>
                     )}
-                    {statusMessage}
                   </div>
                 )}
               </>

@@ -17,7 +17,7 @@ export const truckAccident: AdTemplate = {
     },
     {
       prompt:
-        'Medium close-up, 85mm prime lens f/1.8. Professional attorney in a sharp tailored navy suit, speaking directly to camera with urgent conviction. Hyperrealistic skin detail, micro-expressions of intensity. Modern glass corner office with {city} city skyline visible through windows behind. Warm 3200K key light from left. Slow dolly in. Shallow depth of field, rich contrast. Photorealistic, cinematic color grade.',
+        'Medium close-up, 85mm prime lens f/1.8. Professional attorney in a sharp tailored navy suit, speaking directly to camera with urgent conviction. Hyperrealistic skin detail, micro-expressions of intensity. Modern glass corner office with a recognizable {city} street-level corridor and storefronts visible through windows behind. Warm 3200K key light from left. Slow dolly in. Shallow depth of field, rich contrast. Photorealistic, cinematic color grade.',
       duration: 5,
       source: 'selfie',
       overlay: {
@@ -37,7 +37,7 @@ export const truckAccident: AdTemplate = {
     },
     {
       prompt:
-        'Wide cinematic shot, 35mm anamorphic lens. {city} city skyline at golden hour, camera slowly tilting down to reveal a single lit office window. Warm 2800K golden light spills out. Dramatic cumulus clouds, rich warm tones, anamorphic horizontal lens flare. Shallow depth of field, premium color grade. Photorealistic.',
+        'Wide cinematic shot, 35mm anamorphic lens. {city} street-level legal district at golden hour, camera slowly tilting down from tree canopy to reveal a single lit office window above local storefronts. Warm 2800K golden light spills out. Dramatic cumulus clouds, rich warm tones, anamorphic horizontal lens flare. Shallow depth of field, premium color grade. Photorealistic.',
       duration: 5,
       source: 'text',
       overlay: {

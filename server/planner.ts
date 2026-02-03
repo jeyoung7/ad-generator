@@ -13,6 +13,7 @@ import {
   EDUCATIONAL_VISUALS,
   COMPARISON_VISUALS,
   PATTERN_INTERRUPT_VISUALS,
+  BRAND_VISUALS,
   OVERLAY_TEMPLATES,
   REALISM_SUFFIX,
   UGC_STYLE_SUFFIX,
@@ -120,7 +121,7 @@ export async function generateAdPlan(req: PlanRequest): Promise<AdPlan> {
   const voiceCatalog = await getVoiceCatalogForLLM();
 
   // Build context for scene library
-  const sceneLibraryContext = buildSceneLibraryContext(req.caseType);
+  const sceneLibraryContext = buildSceneLibraryContext(req.caseType, req.locality);
 
   // Build the system prompt
   const systemPrompt = buildSystemPrompt();
@@ -185,24 +186,89 @@ You output ONLY valid JSON. No markdown, no explanation, just the JSON object.
    - UGC format with multi-clip: must use "elevenlabs" or "music_only" (text overlay carries the message)
 
 3. UGC VISUAL RULES:
-   - Medium to wide shots ONLY. Never close-up faces.
-   - Person doing an activity, not looking at camera, not visibly speaking.
-   - Handheld, slightly imperfect framing. The AI imperfections help sell authenticity.
-   - The situation tells the story, not the face.
+   - The UGC format shows a RELATABLE PERSON living their life while a VOICEOVER narrates their story and recommendation of the firm.
+   - The person is NOT looking at camera and NOT speaking. They are doing everyday activities: walking, driving, sitting at a coffee shop, picking up kids, going to work, etc.
+   - Medium-wide or waist-up framing. Handheld phone footage style, like a friend filmed this.
+   - Background MUST be a recognizable REAL location from the firm's city/locality (local coffee shop, familiar parking lot, well-known local park, neighborhood street, suburban shopping strip). This grounds the ad in the community.
+   - The voiceover is the person's voice telling their story — what happened to them and why this firm is the best. The visual is just them living their recovered life.
+   - Handheld, slightly imperfect framing. Natural lighting. No studio. The person should look like someone from that community — relatable, everyday, not a model.
 
-4. VOICE SELECTION:
-   - Choose the best voice from the available ElevenLabs catalog based on format, case type, tone, and platform.
-   - Consider: gender, age, accent, emotional quality.
+4. UGC MESSAGING RULES (IMPORTANT):
+   - The narrator is a REAL PERSON who used this firm and genuinely loves them. They are telling their story and recommending the firm.
+   - The vibe is: "Let me tell you about these people" — enthusiastic, grateful, authentic.
+   - They should mention WHY the firm is the best: how they were treated, how the firm fought for them, how easy the process was, the result they got.
+   - Can include their personal story briefly (what happened to them) but the focus is on the FIRM and why they recommend them.
+   - Sound like a real review, not a scripted testimonial. Use the person's natural voice and rhythm.
+   - NEVER attribute a specific dollar amount to an individual client's case (e.g. "they got me $250K") unless that figure was explicitly provided in the brief. You CAN say the firm has recovered millions/billions for clients in general, or that the firm is the best. Individual testimonials should describe the outcome without a specific number (e.g. "they got me way more than insurance ever offered", "they fought for every penny I deserved").
+   - Do NOT sound like a commercial. No announcer cadence. No "Have you or a loved one..." energy.
+
+5. VOICE SELECTION:
+   - Choose the best voice from the available ElevenLabs catalog based on format, case type, tone, platform, AND LOCALITY.
+   - The voice should sound like someone FROM that city/region. If the firm is in Houston, pick a voice that sounds like a Texan. Miami = someone who could be from South Florida. NYC = fast-talking, direct.
+   - For UGC: pick a voice that sounds like a regular person from that area — not a voiceover artist, not an announcer. Someone you'd meet at the grocery store.
+   - For attorney_direct: pick a confident, authoritative voice that still sounds regionally appropriate.
+   - Consider: gender, age, accent, regional warmth, emotional quality.
    - Fallback: Blain (male) or Kristen (female) if unsure.
 
-5. NARRATION SCRIPTS:
+6. NARRATION SCRIPTS:
 ${NARRATION_STYLE_GUIDE}
 
-6. VISUAL PROMPTS:
+7. VISUAL PROMPTS:
    - Every visual prompt must end with the realism suffix for quality.
    - For UGC format, also append the UGC style suffix.
    - Be specific about camera angle, distance, lighting, and setting.
-   - Avoid any prompt that requires a close-up face or visible lip sync.
+   - LOCALITY IN VISUALS (CRITICAL): If a locality/city is provided, weave recognizable local elements into the visual prompts so viewers instantly know this ad is for THEIR city:
+     * Include iconic landmarks, well-known streets/neighborhoods, or recognizable local storefronts/intersections in backgrounds.
+     * Never use fictional skylines or generic made-up cityscapes.
+     * Use location-appropriate weather, vegetation, architecture, and vibe (e.g., palm trees for Miami, brownstones for Boston, highways for Houston, desert for Phoenix).
+     * For UGC scenes: the person should be in a location that screams that city — a local park, a recognizable intersection, a neighborhood coffee shop with city signage visible.
+     * For non-UGC scenes: incorporate the city's visual identity into cinematic shots (e.g., accident scene on a recognizable local highway, courthouse that looks like the local one, street-level neighborhood detail in relief scenes).
+   - For non-UGC formats: avoid close-up faces or visible lip sync on non-attorney characters.
+
+8. HUMAN PRESENCE POLICY (IMPORTANT):
+   - For NON-UGC formats: Default to NO identifiable individual people in scenes. Only show a clear person when that person is explicitly the attorney. Use silhouettes, hands, over-the-shoulder, or distant/group framing for others.
+   - For UGC format: Show a relatable everyday person doing activities (NOT looking at camera, NOT speaking). The voiceover tells the story. Frame them medium-wide or waist-up. They should look like a normal person from the firm's city, not a model or actor.
+   - Prioritize environment/object/story visuals over faces in non-UGC to avoid AI uncanny artifacts.
+
+9. CREATIVE PUNCH / CINEMATIC FEEL:
+   - Build a scroll-stopping first 1-2 seconds (visual shock, contrast, or sudden movement).
+   - Keep overlays punchy and short (ideally <= 6 words when possible).
+   - Write overlay copy in bold, high-contrast language that can be read in under 1 second.
+   - Aim for premium cinematic language: contrast lighting, purposeful camera movement, textured atmosphere.
+   - Make each scene feel attention-grabbing and platform-native for Instagram/TikTok.
+
+10. CREATIVE VARIATION:
+   - Avoid repetitive framing across scenes.
+   - Mix shot types (macro, wide, overhead, low-angle, tracking, static hold) while staying coherent.
+   - Prefer one strong visual motif per ad and carry it consistently.
+   - Maintain continuity between scenes: same visual world, believable progression, consistent lighting/time-of-day, and recurring location cues so clips feel like one story.
+
+11. AUDIO ↔ OVERLAY SYNCHRONIZATION (TRANSCRIPT MODE):
+   - The narration script is the TRANSCRIPT. The on-screen text overlay is the VISUAL TRANSCRIPT — it shows the exact words being spoken, highlighted in real time.
+   - Each scene's textOverlay MUST be the key phrase extracted directly from the narration for that scene's time window. Not a summary. Not a different line. The actual spoken words (or a punchy 3-6 word excerpt).
+   - The viewer should be able to read the overlay and hear the voice saying those same words at the same time. This creates a TikTok-style word-by-word caption feel.
+   - Narration should feel like it is reading/emphasizing what appears on screen, not saying unrelated lines.
+   - Avoid long spoken tangents that are not represented in overlays.
+
+12. PER-SCENE SCRIPT TIMING:
+   - The full narration script must be paced to fill the ENTIRE ad duration with continuous speech. No dead air.
+   - For each scene, include a "sceneScript" field: the exact portion of the narration that plays during THAT scene's time window.
+   - Word count per scene: ~2.6-2.9 words per second × scene duration. A 5s scene = ~14 words. A 10s scene = ~27 words. A 15s scene = ~41 words.
+   - The concatenation of all sceneScript fields must equal the full audio.script.
+
+13. TONE OSCILLATION IN VOICE:
+   - The narration must NOT be delivered at one flat energy level. The voice rises and falls to match content.
+   - MAIN POINT (the key message of the ad): Biggest energy. Slower, louder, more deliberate. The narrator leans in.
+   - Setup/context: Normal conversational pace and volume.
+   - Pain/problem: Lower energy, more serious, grounded weight.
+   - Relief/gratitude: Warm genuine lift. Like exhaling.
+   - CTA: Casual, direct, friendly nudge. NOT shouty.
+   - Include a "toneDirection" field per scene: a short phrase telling the voice actor how to deliver that scene (e.g., "serious and grounded", "BIG energy — this is the key line", "warm relief", "casual friendly nudge").
+
+14. CTA PLACEMENT:
+   - "Tap the link", "call them", "link in bio", phone number — these ONLY appear in the FINAL scene.
+   - NEVER front-load or mid-roll the CTA. The story earns the right to ask. Build the case, then nudge.
+   - The CTA should feel like a natural ending to the story, not a hard pivot.
 
 ## Output JSON Schema
 
@@ -216,8 +282,10 @@ ${NARRATION_STYLE_GUIDE}
       "duration": 5 | 10 | 15,
       "primitive": "pattern_interrupt" | "pain_point" | "authority_proof" | "social_proof" | "attorney_direct" | "educational_tip" | "comparison" | "cta" | "urgency",
       "visualPrompt": "detailed Grok video generation prompt",
-      "textOverlay": "ON-SCREEN TEXT IN CAPS" | null,
+      "textOverlay": "KEY SPOKEN WORDS IN CAPS (3-6 word excerpt from sceneScript)" | null,
       "overlayPosition": "top" | "center" | "bottom",
+      "sceneScript": "The exact narration spoken during this scene's time window. Word count must match ~2.5 words/sec × duration.",
+      "toneDirection": "How to deliver this scene's voice (e.g. 'serious and grounded', 'BIG energy — key line', 'warm relief', 'casual nudge')",
       "ctaText": "Call Now: (555) 123-4567" | null,
       "showLogo": true | false,
       "videoSource": "text" | "selfie",
@@ -251,6 +319,48 @@ interface UserPromptParams {
   tone?: AdTone;
 }
 
+function buildFirmIntroGuidance(params: {
+  firmName?: string;
+  audienceTemp: AudienceTemp;
+  tone?: AdTone;
+  locality?: string;
+}): string {
+  const { firmName, audienceTemp, tone, locality } = params;
+  if (!firmName) return '';
+
+  const audienceStrategy =
+    audienceTemp === 'cold'
+      ? 'Cold audience: earn attention first, then introduce the firm through proof, context, or authority.'
+      : audienceTemp === 'warm'
+      ? 'Warm audience: acknowledge familiarity and position the firm as a trusted next step.'
+      : 'Hot audience: keep it direct and action-oriented; introduce the firm quickly and move to outcome/CTA.';
+
+  const toneStrategy =
+    tone === 'aggressive'
+      ? 'Tone alignment: bold, competitive, high-urgency language.'
+      : tone === 'authoritative'
+      ? 'Tone alignment: calm confidence, legal clarity, and clear authority.'
+      : tone === 'urgent'
+      ? 'Tone alignment: time-sensitive, decisive, and high-stakes.'
+      : 'Tone alignment: empathetic, human, and reassuring without sounding soft.';
+
+  const localityTag = locality ? ` ${locality}` : '';
+
+  return `## Firm Introduction Guidance
+- The firm mention must feel organic, not templated.
+- Avoid repetitive openers like "At ${firmName}" in every variation.
+- Mention ${firmName} 1-2 times in short ads; save one mention for the CTA beat.
+- Choose one intro angle that matches the audience and tone:
+  - ${audienceStrategy}
+  - ${toneStrategy}
+- Prefer intros like these (adapt, do not copy verbatim):
+  - "So I got hit on ${locality ? `[a well-known local road/highway in ${locality}]` : 'the highway'} and didn't know what to do. My cousin told me to call ${firmName}. Best call I ever made."
+  - "If you're in${localityTag} and you get hurt, you call ${firmName}. That's just what you do around here."
+  - "I'm not the type to sue anybody. But ${firmName} made it easy. They handled everything."
+  - "${firmName} is different. They actually pick up the phone. They actually fight."
+  - "After my accident${localityTag ? ` here in${localityTag}` : ''}, everyone told me to call ${firmName}. Now I tell everyone the same thing."`;
+}
+
 function buildUserPrompt(params: UserPromptParams): string {
   const {
     caseType,
@@ -282,6 +392,13 @@ function buildUserPrompt(params: UserPromptParams): string {
     .map((s) => `[${s.clips.join(', ')}] = ${s.total}s`)
     .join('\n  ');
 
+  const firmIntroGuidance = buildFirmIntroGuidance({
+    firmName,
+    audienceTemp,
+    tone,
+    locality,
+  });
+
   return `Create a video ad plan for a personal injury law firm.
 
 ## Inputs
@@ -310,16 +427,42 @@ ${voiceCatalog}
 
 ## Scene Library (use these as inspiration, adapt freely)
 ${sceneLibraryContext}
+${firmIntroGuidance ? `\n\n${firmIntroGuidance}` : ''}
 
-Generate the complete ad plan as JSON. Pick the best format, structure, voice, and write original visual prompts and narration.`;
+Generate the complete ad plan as JSON. Pick the best format, structure, voice, and write original visual prompts and narration.
+
+KEY PRIORITIES:
+1. NATURAL SCRIPTS: Write narration that sounds like a real person talking, not like a commercial. For UGC, it should sound like someone making a TikTok recommendation. For other formats, conversational and punchy — never stiff or corporate.
+2. LOCAL IMAGERY: ${locality ? `This ad is for ${locality}. EVERY visual prompt should incorporate recognizable street-level elements from ${locality} — landmarks, local streets, neighborhood storefronts, architecture, vegetation, weather patterns. The viewer should instantly think "that's MY city." Avoid fictional skylines or generic made-up cityscapes. For UGC, put the person in a location that looks like ${locality}.` : 'Use generic American neighborhood/street-level visuals.'}
+3. LOCAL VOICE: ${locality ? `Pick a voice that sounds like someone from ${locality}. Match the regional accent, cadence, and energy.` : 'Pick a voice that matches the tone.'}
+4. For UGC format: A relatable everyday person is shown doing normal activities (walking, getting coffee, driving, picking up kids) while a VOICEOVER of that person narrates their story and recommends the firm — like telling a friend about the best lawyer they ever had. The person is NOT looking at camera and NOT speaking on screen. The voiceover carries the entire message.
+5. Prioritize punchy cinematic brand-style visuals with minimal individual people unless the attorney is on-screen by intent or it's UGC format.
+6. SCENE CONTINUITY: Scene-to-scene prompts should feel like one continuous mini-film, not disconnected stock shots. Keep time-of-day, weather, location character, and camera language coherent across all clips.
+7. WRITING STYLE: Favor David Perell-style clarity and narrative flow (clear throughline, vivid specifics, no fluff) while keeping it natural and local.`;
 }
 
 // ---------------------------------------------------------------------------
 // Scene Library Context Builder
 // ---------------------------------------------------------------------------
 
-function buildSceneLibraryContext(caseType: CaseType): string {
+function buildSceneLibraryContext(caseType: CaseType, locality?: string): string {
   const sections: string[] = [];
+
+  if (locality) {
+    sections.push(`LOCAL IMAGERY GUIDANCE for ${locality}:
+  - Incorporate recognizable landmarks, streets, neighborhoods, and architecture from ${locality} into visual prompts.
+  - Use ${locality}-appropriate weather, vegetation, terrain, and urban/suburban character.
+  - For UGC: show the person doing everyday LOCAL activities — walking through a popular ${locality} neighborhood, grabbing coffee at a local spot, driving on a well-known ${locality} road, sitting in a park that feels like ${locality}, picking up kids from school with ${locality} architecture in the background. The viewer should think "that looks like my neighborhood."
+  - For accident/pain scenes: reference roads, highways, intersections, or locations typical of ${locality}. Use local weather conditions (rain, snow, heat) that match the region.
+  - For relief/after scenes: show the person enjoying life in ${locality}-recognizable locations — local parks, riverfronts, neighborhood streets, suburban shopping areas.
+  - Include regional details: local signage, building styles, street layouts, vegetation, terrain.
+  - The goal: a viewer from ${locality} should instantly recognize their city and feel "this ad is for ME."`);
+  }
+
+  const brandVisuals = BRAND_VISUALS[caseType];
+  if (brandVisuals) {
+    sections.push(`Brand-first cinematic visuals (no identifiable people):\n${brandVisuals.slice(0, 2).map((v) => `  - ${v}`).join('\n')}`);
+  }
 
   const painVisuals = PAIN_VISUALS[caseType];
   if (painVisuals) {
@@ -406,6 +549,8 @@ function parseLLMResponse(raw: string, req: PlanRequest): AdPlan {
     visualPrompt: appendSuffixes(s.visualPrompt || '', parsed.formatType),
     textOverlay: s.textOverlay || undefined,
     overlayPosition: s.overlayPosition || 'center',
+    sceneScript: s.sceneScript || undefined,
+    toneDirection: s.toneDirection || undefined,
     ctaText: s.ctaText || undefined,
     showLogo: s.showLogo ?? (i === (parsed.scenes?.length ?? 1) - 1),
     videoSource: s.videoSource || 'text',
@@ -452,7 +597,7 @@ function appendSuffixes(prompt: string, formatType: string): string {
   if (!result.includes('Render as live-action')) {
     result = `${result} ${REALISM_SUFFIX}`;
   }
-  if (formatType === 'ugc' && !result.includes('medium-wide')) {
+  if (formatType === 'ugc' && !result.includes('selfie-style')) {
     result = `${result} ${UGC_STYLE_SUFFIX}`;
   }
   return result;
@@ -532,9 +677,9 @@ function buildFallbackPlan(req: PlanRequest, formatType: AdFormatType): AdPlan {
 function getDefaultVisual(primitive: string, caseType: CaseType): string {
   switch (primitive) {
     case 'pattern_interrupt':
-      return PATTERN_INTERRUPT_VISUALS[caseType]?.[0] || 'Dramatic opening shot, cinematic lighting';
+      return BRAND_VISUALS[caseType]?.[0] || PATTERN_INTERRUPT_VISUALS[caseType]?.[0] || 'Dramatic opening shot, cinematic lighting';
     case 'pain_point':
-      return PAIN_VISUALS[caseType]?.[0] || 'Person in distress after an injury, medium-wide shot';
+      return BRAND_VISUALS[caseType]?.[1] || PAIN_VISUALS[caseType]?.[0] || 'Cinematic injury aftermath visual, no identifiable person';
     case 'authority_proof':
       return AUTHORITY_VISUALS[0];
     case 'social_proof':
@@ -550,7 +695,7 @@ function getDefaultVisual(primitive: string, caseType: CaseType): string {
     case 'urgency':
       return PATTERN_INTERRUPT_VISUALS[caseType]?.[1] || 'Urgent visual, clock ticking, dramatic lighting';
     default:
-      return PAIN_VISUALS[caseType]?.[0] || 'Cinematic shot related to personal injury';
+      return BRAND_VISUALS[caseType]?.[0] || PAIN_VISUALS[caseType]?.[0] || 'Cinematic shot related to personal injury';
   }
 }
 

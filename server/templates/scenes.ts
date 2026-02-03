@@ -15,7 +15,46 @@ export const REALISM_SUFFIX =
  * Applied when the format is UGC to avoid close-up face issues.
  */
 export const UGC_STYLE_SUFFIX =
-  'Shot from medium-wide distance (waist up or further). Handheld vertical phone footage style, slightly shaky, casual framing. Subject is NOT looking at camera and NOT visibly speaking. Natural ambient lighting. No studio setup.';
+  'Shot as casual handheld vertical phone footage, like a friend filmed this. Subject is a relatable everyday person going about their life — NOT looking at camera, NOT speaking. They are walking, driving, sitting at a coffee shop, picking up their kids, etc. The voiceover tells the story while we watch them live their life. Medium-wide or waist-up framing. Background should show a recognizable real-world location from the firm\'s city. Natural ambient lighting, no studio setup, slightly imperfect framing that feels authentic and not produced.';
+
+/**
+ * Full-frame, high-contrast brand visuals that avoid identifiable people.
+ * Use these when we want premium cinematic energy without uncanny AI faces.
+ */
+export const BRAND_VISUALS: Record<CaseType, string[]> = {
+  'car-accident': [
+    'Shattered windshield fragments suspended in slow motion against black, red-blue emergency reflections sweeping across glass, anamorphic streaks, macro lens, high contrast',
+    'Crumpled metal and broken headlight on wet asphalt, rain droplets sparkling under flashing emergency light, low-angle tracking push-in, cinematic grade',
+  ],
+  'truck-accident': [
+    'Massive truck wheel rolling through spray at dawn, low ground-level tracking shot, harsh side light, cinematic tension',
+    'Twisted guardrail and debris field stretching into distance, drone pull-up reveal, foggy morning atmosphere, dramatic color contrast',
+  ],
+  'slip-and-fall': [
+    'Glossy wet tile with toppled caution sign spinning in slow motion, top-down spotlight, hard shadows, dramatic legal ad look',
+    'Water droplet impacts rippling across polished floor, macro shot, strobing fluorescent reflections, high-detail realism',
+  ],
+  'medical-malpractice': [
+    'Sterile operating room lights flare on into camera, cold blue tones, subtle camera shake, cinematic suspense',
+    'Medication bottle labels in sharp macro focus with one mismatched dosage highlighted by a moving light beam, dark clinical backdrop',
+  ],
+  'wrongful-death': [
+    'Single candle flickering beside a framed photo silhouette, shallow depth of field, warm amber palette, slow push-in',
+    'Empty dining table place setting with untouched plate, dust particles in evening sunbeam, locked-off frame, emotional restraint',
+  ],
+  'workplace-injury': [
+    'Cracked hard hat on concrete with rotating red warning beacon washing over it, gritty industrial texture, low-angle cinematic shot',
+    'Frayed safety harness strap snapping in extreme slow motion, sparks and dust in backlight, high-impact macro framing',
+  ],
+  'dog-bite': [
+    'Bent chain-link fence vibrating after impact, shallow depth of field, tense suburban night lighting, slow dolly move',
+    'Torn fabric and first-aid gauze on concrete, hard sidelight, dramatic shadows, premium cinematic close-up',
+  ],
+  'rideshare-accident': [
+    'Cracked phone screen displaying rideshare route map while hazard lights pulse across glass, macro push-in, neon city reflections',
+    'Backseat dashboard glow and sudden jolt blur, city bokeh streaks outside, handheld energy, cinematic motion blur',
+  ],
+};
 
 // ---------------------------------------------------------------------------
 // Pain Scene Visuals — Per Case Type
@@ -217,7 +256,7 @@ export const COMPARISON_VISUALS: Record<CaseType, { without: string; withAttorne
       withAttorney: 'Person smiling while attorney reviews a much larger settlement offer, warm office, medium shot',
     },
     {
-      without: 'Check for a small amount ($8,000) on a kitchen table next to medical bills totaling $40,000, overhead shot',
+      without: 'Small insurance check on a kitchen table next to a tall stack of medical bills, overhead shot',
       withAttorney: 'Check for a large settlement visible in an envelope, person opening it with relief, medium shot',
     },
   ],
@@ -308,7 +347,7 @@ export const PATTERN_INTERRUPT_VISUALS: Record<CaseType, string[]> = {
   'rideshare-accident': [
     'Phone notification "Your driver is arriving" followed by brake screech implied motion, close-up of phone',
     'Rideshare app rating screen showing 5 stars while car crumples in background, split focus',
-    'Backseat POV of city lights through windshield, then sudden stop/jolt, night driving',
+    'Backseat POV of neighborhood streetlights through windshield, then sudden stop/jolt, night driving',
   ],
 };
 
@@ -448,44 +487,44 @@ export const OVERLAY_TEMPLATES: Record<ScenePrimitive, Record<CaseType, string[]
 
   social_proof: {
     'car-accident': [
-      'I got rear-ended on my way to pick up my kids. They offered me $8,000. My attorney got me $250,000.',
-      'The insurance company tried to settle for nothing. One call changed everything.',
-      'I was scared to call a lawyer. Best decision I ever made.',
+      'OK so I got rear-ended picking up my kids right. Insurance offered me nothing. These guys fought for me and got me way more than I ever expected. I\'m not even exaggerating.',
+      'I was so stressed after my accident I couldn\'t sleep. My friend said call these guys. Honestly best decision I ever made. They handled literally everything.',
+      'I didn\'t wanna be that person who calls a lawyer. But the insurance company was playing games. One call and everything changed. I tell everyone about them now.',
     ],
     'truck-accident': [
-      'An 18-wheeler hit my car on the highway. I was in the hospital for 3 months. They got me $1.2 million.',
-      'The trucking company denied everything. My attorney found the black box data. Case closed.',
-      'I didn\'t think I had a case. Turns out the driver was on hour 16 of a 14-hour limit.',
+      'An 18-wheeler clipped me on the highway. I was in the hospital three months. These guys fought for every penny I deserved. I still can\'t believe it honestly.',
+      'The trucking company acted like nothing happened. My attorneys found the black box data. Done. Case closed. They don\'t play around.',
+      'I didn\'t think I even had a case. Turns out the driver was on hour 16 of a 14-hour limit. These guys knew exactly where to look.',
     ],
     'slip-and-fall': [
-      'I slipped in a grocery store. They tried to blame me. My attorney got me $180,000.',
-      'Broken hip at 65 because a restaurant didn\'t clean up a spill. They paid.',
-      'The landlord ignored the broken stairs for months. I fell. They settled.',
+      'I slipped in a grocery store and they tried to blame ME. My attorneys got me what I deserved. Don\'t let them tell you it was your fault.',
+      'Broke my hip at 65 because a restaurant couldn\'t clean up a spill. These lawyers made them pay every penny.',
+      'My landlord ignored the broken stairs for months. I fell. They settled. Get yourself a good lawyer. Seriously.',
     ],
     'medical-malpractice': [
-      'They gave me the wrong medication for two years. My attorney got me the justice I deserved.',
-      'The surgeon left a tool inside me. The hospital tried to cover it up. My attorney didn\'t let them.',
-      'Misdiagnosed cancer. By the time they caught it, it had spread. We held them accountable.',
+      'They had me on the wrong medication for TWO YEARS. Two years. My lawyers got me the justice I deserved. I can\'t say enough good things about them.',
+      'The surgeon left a tool inside me. The hospital tried to cover it up. My attorneys didn\'t let that happen. They\'re bulldogs.',
+      'Misdiagnosed. By the time they caught it, it spread. My lawyers held every single one of them accountable. I\'m so grateful.',
     ],
     'wrongful-death': [
-      'We lost my father because of a defective product. Our attorney gave us our voice back.',
-      'No one could bring him back. But our attorney made sure the company answered for what they did.',
-      'The nursing home was negligent. Our family found an attorney who cared as much as we did.',
+      'We lost my dad because of a defective product. Our attorneys gave our family a voice again. They treated us like family.',
+      'Nothing brings him back. But our lawyers made sure that company answered for what they did. They cared about us. Really cared.',
+      'The nursing home was negligent. We found attorneys who were just as angry about it as we were. That meant everything.',
     ],
     'workplace-injury': [
-      'I got hurt on a construction site with no safety equipment. My attorney got me $400,000.',
-      'My employer said it was my fault. OSHA said otherwise. My attorney made them pay.',
-      'Workers comp wasn\'t enough to cover my bills. My attorney got me the full amount.',
+      'Got hurt on a construction site. No safety equipment, nothing. My lawyers fought for me and won. My boss tried to blame me. Yeah, that didn\'t work.',
+      'My employer said it was my fault. OSHA said otherwise. My attorneys made them pay. Don\'t let your job push you around.',
+      'Workers comp barely covered my bills. My lawyers got me the rest and then some. Should\'ve called them day one.',
     ],
     'dog-bite': [
-      'Their pit bull attacked my son at the park. The owner\'s insurance paid every penny.',
-      'I needed reconstructive surgery after a dog bite. My attorney got the homeowner to pay.',
-      'The dog had a history. The owner did nothing. My attorney held them responsible.',
+      'Their pit bull went after my son at the park. The owner\'s insurance paid every penny. My lawyers made sure of it. They\'re amazing.',
+      'I needed reconstructive surgery. Reconstructive surgery from a dog bite. My attorneys got the homeowner to cover all of it.',
+      'The dog had bit someone before and the owner did nothing. My lawyers held them responsible. That\'s what good lawyers do.',
     ],
     'rideshare-accident': [
-      'My Uber driver crashed into a guardrail. The app ghosted me. My attorney got me $175,000.',
-      'Three insurance companies pointing fingers. My attorney cut through all of it.',
-      'I was just a passenger. I shouldn\'t have had to fight for my medical bills. My attorney fought for me.',
+      'My Uber driver crashed into a guardrail. The app ghosted me. Like literally ghosted me. My lawyers got me what I was owed.',
+      'Three insurance companies all pointing fingers at each other. My attorneys cut through all of it in like a month.',
+      'I was just a passenger. Just sitting in the backseat. I shouldn\'t have had to fight for anything. My lawyers fought so I didn\'t have to.',
     ],
   },
 
@@ -577,18 +616,18 @@ export const OVERLAY_TEMPLATES: Record<ScenePrimitive, Record<CaseType, string[]
 
   comparison: {
     'car-accident': [
-      'Without an attorney: $8,000 settlement. With our firm: $250,000. Same accident.',
+      'Without an attorney: lowball offer. With our firm: the settlement you actually deserve.',
       'Insurance company\'s first offer vs. what you actually deserve.',
       'Going alone vs. having a legal team. The numbers speak for themselves.',
     ],
     'truck-accident': [
       'Their legal team vs. no representation. You\'re outgunned from day one.',
-      'Average truck accident settlement without attorney: $50K. With attorney: $500K+.',
+      'Without an attorney: you settle for less. With our firm: you get what you\'re owed.',
       'What the trucking company wants to pay vs. what the law says you\'re owed.',
     ],
     'slip-and-fall': [
       'Property owner\'s excuse vs. the evidence. We find the truth.',
-      'What they offered: $3,000. What we got: $180,000.',
+      'What they offered: almost nothing. What we got: real compensation.',
       'Before: ignored. After: compensated. That\'s what an attorney does.',
     ],
     'medical-malpractice': [
@@ -608,7 +647,7 @@ export const OVERLAY_TEMPLATES: Record<ScenePrimitive, Record<CaseType, string[]
     ],
     'dog-bite': [
       'Homeowner\'s excuse vs. the evidence of prior incidents.',
-      'Insurance first offer: $2,000. Our result: $85,000.',
+      'Insurance first offer: insult money. Our result: real justice.',
       'Accepting blame vs. proving the owner\'s negligence.',
     ],
     'rideshare-accident': [
@@ -620,44 +659,44 @@ export const OVERLAY_TEMPLATES: Record<ScenePrimitive, Record<CaseType, string[]
 
   cta: {
     'car-accident': [
-      'Free consultation. No fee unless we win. Call now.',
-      'One call could be worth hundreds of thousands. Don\'t wait.',
-      'Free case review — call {phoneNumber} now.',
+      'Honestly just call them. Free consultation. {phoneNumber}',
+      'One phone call. That\'s it. They take it from there.',
+      'Call {phoneNumber}. No fee unless you win.',
     ],
     'truck-accident': [
-      'Free consultation. We handle the trucking companies. You focus on healing.',
-      'Call now. Evidence disappears fast in truck cases.',
-      'Free case review — call {phoneNumber} now.',
+      'Call them before the trucking company destroys evidence. {phoneNumber}',
+      'Free consultation. They know how to handle these cases.',
+      'Seriously, just call. {phoneNumber}. They\'ll tell you if you have a case.',
     ],
     'slip-and-fall': [
-      'Free consultation. We hold property owners accountable.',
-      'Don\'t let them get away with it. Call today.',
-      'Free case review — call {phoneNumber} now.',
+      'Don\'t let them get away with it. Call {phoneNumber}.',
+      'Free consultation. Takes five minutes. {phoneNumber}',
+      'Just call. They\'ll tell you exactly what you\'re owed. {phoneNumber}',
     ],
     'medical-malpractice': [
-      'Free consultation. Your medical records tell the story. We\'ll read them for you.',
-      'You trusted them with your health. Trust us with your case.',
-      'Free case review — call {phoneNumber} now.',
+      'Free consultation. They\'ll review your records and tell you straight up. {phoneNumber}',
+      'You trusted them with your health. Trust these guys with your case.',
+      'Call {phoneNumber}. They\'ll figure out if you have a case. No charge.',
     ],
     'wrongful-death': [
-      'Free consultation. Your family deserves justice. Call us.',
-      'We\'ll fight for your family. No fee unless we win.',
-      'Free case review — call {phoneNumber} now.',
+      'Your family deserves answers. Call {phoneNumber}.',
+      'They fight for families. No fee unless you win. {phoneNumber}',
+      'Take the first step. Call {phoneNumber}.',
     ],
     'workplace-injury': [
-      'Free consultation. Your employer had a duty. We\'ll enforce it.',
-      'Beyond workers comp. Call to find out what you\'re really owed.',
-      'Free case review — call {phoneNumber} now.',
+      'You\'re owed more than workers comp. Call {phoneNumber} to find out how much.',
+      'Free consultation. They deal with employers like yours every day.',
+      'Call {phoneNumber}. Let them fight your employer so you don\'t have to.',
     ],
     'dog-bite': [
-      'Free consultation. The owner pays, not you.',
-      'Your injuries. Their responsibility. Call now.',
-      'Free case review — call {phoneNumber} now.',
+      'The owner pays. Not you. Call {phoneNumber}.',
+      'Free consultation. They handle dog bite cases all the time.',
+      'Just call {phoneNumber}. They\'ll handle the rest.',
     ],
     'rideshare-accident': [
-      'Free consultation. We navigate the insurance maze for you.',
-      'You were just a passenger. Let us handle the rest.',
-      'Free case review — call {phoneNumber} now.',
+      'Three insurance companies? Let them sort it out. Call {phoneNumber}.',
+      'You were just a passenger. Let them handle everything. {phoneNumber}',
+      'Free consultation. They know how Uber and Lyft insurance works. {phoneNumber}',
     ],
   },
 
@@ -710,15 +749,45 @@ export const OVERLAY_TEMPLATES: Record<ScenePrimitive, Record<CaseType, string[]
 // ---------------------------------------------------------------------------
 
 export const NARRATION_STYLE_GUIDE = `
-Write narration scripts the way real people talk:
-- Short sentences. Conversational rhythm.
-- Use specific dollar amounts for impact.
-- Repetition for emphasis ("Eight grand. Eight grand.")
-- Personal, not clinical. Say "I got hit" not "I was involved in an automobile collision."
-- Contractions always. "They're" not "They are." "Don't" not "Do not."
-- Emotional beats: frustration → hope → action.
-- Thomas J. Henry style: aggressive toward insurance companies, empathetic toward victims.
-  Big results front and center. "We fight. They pay." energy.
+Write narration like someone telling a friend what happened over coffee — not like an ad:
+- Talk like a real person from the locality. If it's Houston, sound like Houston. If it's Miami, sound like Miami. Match the local rhythm and slang naturally.
+- Short, punchy sentences. Fragments are fine. "Got rear-ended on 45. Lady ran a red. My neck's been messed up ever since."
+- NEVER say the firm got a specific dollar amount for an individual client (e.g. "they got me $250K") unless that figure was explicitly provided in the brief. You CAN say the firm has recovered millions/billions for clients generally. You CAN describe the insurance lowball without attributing a specific recovery amount to the firm.
+- Repetition lands. "They lowballed me. Lowballed me after everything I went through."
+- NEVER sound like a commercial. No "Have you or a loved one..." energy. No announcer voice cadence.
+- Say "I got hit" not "I was involved in an automobile collision." Say "messed up my back" not "sustained injuries to my lumbar region."
+- Contractions always. "They're" not "They are." "Don't" not "Do not." "Couldn't" not "Could not."
+- Emotional arc: frustration → relief → gratitude. The person is telling the story AFTER getting help. They're grateful, not pitching.
+- Narrative quality: write like a tight mini-story with setup → tension → turning point → resolution → CTA.
+- Style reference: prioritize David Perell-style clarity and flow (clear throughline, vivid specifics, no fluff) without imitating exact phrasing.
+- For UGC: the narrator genuinely likes this firm. They're not reading a script — they're recommending them the way you'd recommend your favorite restaurant. Real enthusiasm, not salesy enthusiasm.
+- Thomas J. Henry energy when the attorney speaks: aggressive toward insurers, empathetic toward victims. "We fight. They pay."
 - For wrongful death: softer tone, grief-aware, but still strong on accountability.
-- End with a clear, direct CTA. No hedging.
+- End with a natural CTA. Not "Call now!" but "Honestly just call them. That's all I did."
+
+## TIMING — FIT THE FULL 20 SECONDS
+- The script MUST be paced to fill the entire ad duration naturally. For a 20-second ad, write ~52-58 words (roughly 2.6-2.9 words/second at conversational speed).
+- No dead air gaps. No rushing. The voice should flow continuously from first second to last — every beat of the ad has spoken content driving it forward.
+- If the ad is 15 seconds, write ~40-44 words. If 25 seconds, write ~65-72 words. Scale proportionally.
+- Read the script out loud in your head. If it feels rushed or leaves silence, adjust.
+
+## TONE OSCILLATION — VOICE FOLLOWS THE CONTENT
+- The voice should NOT be one flat energy level. It rises and falls with the meaning of what's being said.
+- MAIN POINT / KEY MESSAGE: Deliver with the BIGGEST energy. Slower, louder, more deliberate. This is the line the viewer remembers. It should feel like the narrator is leaning in and saying "listen to THIS part."
+- Setup / context lines: Conversational, normal volume, natural pace. These are the "so here's what happened" lines.
+- Pain / problem lines: Slightly lower energy, more serious, grounded. The voice drops to match the weight of the situation.
+- Relief / gratitude lines: Warm, genuine lift in energy. Not hype — real relief. Like exhaling after holding your breath.
+- CTA / "tap the link" / "call them": Casual and direct, NOT shouty. Friendly nudge energy, like telling a friend "seriously, just do it."
+- Think of it like a story arc in the voice itself: normal → heavy → BIG moment → warm resolve → easy nudge.
+
+## CTA PLACEMENT — "TAP THE LINK" COMES LAST
+- Any call-to-action ("tap the link", "call them", "link in bio", phone number) MUST appear ONLY in the final 2-3 seconds of the script.
+- NEVER front-load or mid-roll the CTA. The story earns the CTA. Build the case first, then ask.
+- The CTA should feel like a natural conclusion to the story, not a pivot. Example: "...best call I ever made. Link's right there." NOT "Call now! Here's what happened to me..."
+
+## OVERLAY TRANSCRIPTION — ILLUMINATE THE VOICE
+- The on-screen text overlay for each scene should be the KEY PHRASE from what the narrator is saying in that moment — not a summary, not a different line. The exact words (or a punchy excerpt) that the voice is speaking.
+- The overlay makes the spoken word VISUAL. The viewer reads what they hear. This creates a double-hit: ears + eyes reinforcing the same message simultaneously.
+- Keep overlays to the most impactful 3-6 words from that scene's narration. If the narrator says "They lowballed me after everything I went through," the overlay is "LOWBALLED ME" or "AFTER EVERYTHING I WENT THROUGH."
+- The overlay should feel like the transcript is being highlighted in real time — the most important fragment of each spoken beat, displayed as the voice says it.
 `;

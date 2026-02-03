@@ -164,11 +164,15 @@ export interface ScenePlan {
   primitive: ScenePrimitive;
   /** Grok video generation prompt */
   visualPrompt: string;
-  /** On-screen text overlay (for sound-off viewing) */
+  /** On-screen text overlay — the key spoken words from sceneScript displayed as visual transcript */
   textOverlay?: string;
   /** Overlay position */
   overlayPosition: 'top' | 'center' | 'bottom';
-  /** CTA text (usually last scene only) */
+  /** The exact narration spoken during this scene's time window */
+  sceneScript?: string;
+  /** Voice delivery direction for this scene (e.g. "serious and grounded", "BIG energy") */
+  toneDirection?: string;
+  /** CTA text (last scene only) */
   ctaText?: string;
   /** Whether to show the firm logo */
   showLogo: boolean;
@@ -274,16 +278,18 @@ export const FORMAT_SELECTION_MATRIX: Record<Platform, Record<AudienceTemp, AdFo
 // ---------------------------------------------------------------------------
 
 export const UGC_VISUAL_RULES = {
-  /** Medium to wide shots only — never close-up face */
-  shotType: 'medium_wide',
-  /** Person doing an activity, not looking at camera */
-  subjectBehavior: 'action_implied',
-  /** No visible lip movement — distance and activity hide it */
+  /** Medium-wide or waist-up, handheld phone footage style */
+  shotType: 'medium_wide_handheld',
+  /** Relatable person doing everyday activities, NOT looking at camera, NOT speaking */
+  subjectBehavior: 'activity_with_voiceover',
+  /** No visible lip movement — voiceover carries the narration */
   lipMovement: false,
-  /** Handheld, slightly imperfect framing */
+  /** Handheld, friend-filming style, slightly imperfect, authentic */
   cameraStyle: 'handheld_casual',
-  /** Single clip [15] can use Grok voice; multi-clip = overlay only or ElevenLabs */
-  voiceRule: 'single_clip_grok_or_elevenlabs_overlay',
+  /** Background should show recognizable local setting from firm's city */
+  backgroundRule: 'local_recognizable_setting',
+  /** Single clip [15] can use Grok voice; multi-clip = ElevenLabs voiceover */
+  voiceRule: 'single_clip_grok_or_elevenlabs',
 } as const;
 
 // ---------------------------------------------------------------------------

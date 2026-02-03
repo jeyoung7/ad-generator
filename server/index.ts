@@ -14,6 +14,7 @@ import {
   concatClips,
   mixAudio,
   extractAudioTrack,
+  cleanSpeechTrack,
   getLayoutSpec,
   type VideoLayout,
 } from './compose.js';
@@ -37,6 +38,7 @@ import {
   type NarrationVoice,
 } from './narration.js';
 import { generateAdPlan, generateCampaignBatch } from './planner.js';
+import { applyRemotionWordCaptions, type CaptionStyle } from './remotionCaptions.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -44,11 +46,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 const ROOT = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(ROOT, 'output');
 const UPLOADS_DIR = path.join(ROOT, 'uploads');
+const DEFAULT_REMOTION_DIR = path.join(ROOT, 'remotion-template-tiktok');
+const REMOTION_TIKTOK_DIR = process.env.REMOTION_TIKTOK_DIR || DEFAULT_REMOTION_DIR;
 
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -69,6 +73,10 @@ type NarrationTrackId =
   | 'narration-attorney-video'
   | 'narration-female'
   | 'narration-male';
+type CaptionMode = 'none' | 'remotion-word';
+
+const TARGET_NARRATION_WORDS_PER_SECOND = 2.75;
+const NARRATION_DURATION_HEADROOM = 1.0;
 
 /**
  * Upload a local file to R2 via wrangler CLI and return its public HTTPS URL.
@@ -116,6 +124,18 @@ function parseAudioMode(mode?: string): AudioMode {
   return 'music';
 }
 
+function parseCaptionMode(mode?: string): CaptionMode {
+  if (mode === 'remotion-word' || mode === 'none') return mode;
+  return 'remotion-word';
+}
+
+function parseCaptionStyle(style?: string): CaptionStyle {
+  if (style === 'impact' || style === 'clean' || style === 'kinetic') {
+    return style;
+  }
+  return 'impact';
+}
+
 function isVideoFile(filePath: string): boolean {
   return /\.(mp4|mov|webm|m4v)$/i.test(filePath);
 }
@@ -141,6 +161,43 @@ function buildScenePrompt(basePrompt: string, index: number, totalScenes: number
   return `${basePrompt} Middle story beat: visually continue the previous scene and explain one key phenomenon/value point before the reveal. Keep momentum and clarity. ${continuitySuffix} ${realismSuffix}`;
 }
 
+function sanitizeContextSnippet(text: string | undefined, maxChars = 160): string {
+  if (!text) return '';
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned.length <= maxChars ? cleaned : `${cleaned.slice(0, maxChars).replace(/[,\s]+$/g, '')}...`;
+}
+
+function buildPlanScenePrompt(plan: AdPlan, index: number): string {
+  const scene = plan.scenes[index];
+  const basePrompt = replacePlaceholders(scene.visualPrompt, {
+    locality: plan.locality,
+    phoneNumber: plan.phoneNumber,
+  });
+
+  const prev = index > 0 ? plan.scenes[index - 1] : undefined;
+  const next = index < plan.scenes.length - 1 ? plan.scenes[index + 1] : undefined;
+
+  const prevContext = prev
+    ? `Previous beat context: ${prev.primitive}${prev.textOverlay ? `, overlay "${sanitizeContextSnippet(replacePlaceholders(prev.textOverlay, { locality: plan.locality, phoneNumber: plan.phoneNumber }), 70)}"` : ''}. Visual cue: ${sanitizeContextSnippet(replacePlaceholders(prev.visualPrompt, { locality: plan.locality, phoneNumber: plan.phoneNumber }))}`
+    : '';
+  const nextContext = next
+    ? `Next beat intent: ${next.primitive}${next.textOverlay ? `, overlay "${sanitizeContextSnippet(replacePlaceholders(next.textOverlay, { locality: plan.locality, phoneNumber: plan.phoneNumber }), 70)}"` : ''}.`
+    : '';
+
+  const beatDirection =
+    index === 0
+      ? 'Opening beat: establish the scene language for the whole ad and create immediate curiosity.'
+      : index === plan.scenes.length - 1
+      ? 'Final beat: resolve the story naturally and land the offer/CTA in the last seconds.'
+      : 'Middle beat: feel like a direct continuation of the previous clip, not a visual reset.';
+
+  const continuityDirection =
+    'Continuity lock: keep the same world across scenes (matching location character, time-of-day lighting, weather, color palette, wardrobe/props, and camera language). Use believable transitions as if this is one continuous short film.';
+
+  return `${basePrompt} ${beatDirection} ${continuityDirection} ${prevContext} ${nextContext}`;
+}
+
 function buildNarrationScript(
   tmpl: (typeof templates)[number],
   overrides: SceneOverrides | undefined,
@@ -158,7 +215,12 @@ function buildNarrationScript(
 
     const rawCta = override?.cta ?? scene.overlay.cta;
     if (rawCta && i === tmpl.scenes.length - 1) {
-      lines.push(replacePlaceholders(rawCta, { locality, phoneNumber }));
+      const contextText = [rawText, ...lines].filter(Boolean).join(' ');
+      lines.push(
+        expandNarrationCta(replacePlaceholders(rawCta, { locality, phoneNumber }), {
+          contextText,
+        })
+      );
     }
   });
 
@@ -169,6 +231,134 @@ function buildNarrationScript(
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' ');
+}
+
+function fitNarrationScriptToDuration(script: string, durationSeconds: number): string {
+  const cleaned = script.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return '';
+
+  const maxWords = Math.max(
+    1,
+    Math.floor(durationSeconds * TARGET_NARRATION_WORDS_PER_SECOND * NARRATION_DURATION_HEADROOM)
+  );
+  const words = cleaned.split(' ').filter(Boolean);
+  if (words.length <= maxWords) {
+    return cleaned;
+  }
+
+  const trimmed = words.slice(0, maxWords).join(' ').trim();
+  const sentenceEnd = Math.max(trimmed.lastIndexOf('. '), trimmed.lastIndexOf('! '), trimmed.lastIndexOf('? '));
+  if (sentenceEnd > Math.floor(trimmed.length * 0.6)) {
+    return trimmed.slice(0, sentenceEnd + 1).trim();
+  }
+
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function buildSceneSyncedPlanNarration(plan: AdPlan): string {
+  // Prefer per-scene scripts from LLM (sceneScript fields) for precise timing
+  const hasSceneScripts = plan.scenes.some((s) => s.sceneScript);
+
+  if (hasSceneScripts) {
+    const parts: string[] = [];
+    for (const scene of plan.scenes) {
+      if (scene.sceneScript) {
+        parts.push(
+          replacePlaceholders(scene.sceneScript.replace(/\s+/g, ' ').trim(), {
+            locality: plan.locality,
+            phoneNumber: plan.phoneNumber,
+          })
+        );
+      }
+    }
+    const joined = parts.filter(Boolean).join(' ');
+    return joined || '';
+  }
+
+  // Fallback: build from overlays
+  const lines: string[] = [];
+
+  for (const scene of plan.scenes) {
+    if (scene.textOverlay) {
+      lines.push(
+        replacePlaceholders(scene.textOverlay, {
+          locality: plan.locality,
+          phoneNumber: plan.phoneNumber,
+        })
+      );
+    }
+
+    if (scene.ctaText) {
+      const sceneContextText = `${scene.textOverlay || ''} ${plan.caseType} ${plan.tone}`.trim();
+      lines.push(
+        expandNarrationCta(
+          replacePlaceholders(scene.ctaText, {
+            locality: plan.locality,
+            phoneNumber: plan.phoneNumber,
+          }),
+          { contextText: sceneContextText }
+        )
+      );
+    }
+  }
+
+  const script = lines
+    .map((line) => line.replace(/\s+/g, ' ').trim().replace(/[.!?]+$/g, ''))
+    .filter(Boolean)
+    .join('. ');
+
+  return script ? `${script}.` : '';
+}
+
+function inferNarrationGoal(contextText: string): string {
+  const normalized = contextText.toLowerCase();
+
+  if (/(wrongful|death|family|grief|loss|funeral)/.test(normalized)) {
+    return 'hold them accountable and pursue justice for your family';
+  }
+
+  if (/(insurance|lowball|denied|evidence|claim|report it|app data|receipt)/.test(normalized)) {
+    return 'protect your claim before insurance cuts it down';
+  }
+
+  if (/(medical|hospital|rehab|treatment|injury|pain|wages|work)/.test(normalized)) {
+    return 'fight for compensation for medical bills, lost wages, and pain';
+  }
+
+  return 'fight for the compensation you deserve';
+}
+
+function expandNarrationCta(
+  rawCta: string,
+  opts?: { contextText?: string }
+): string {
+  const cta = rawCta.replace(/\s+/g, ' ').trim();
+  if (!cta) return '';
+
+  const normalized = cta.toLowerCase();
+  const goal = inferNarrationGoal(opts?.contextText || '');
+
+  if (normalized.includes('link in bio')) {
+    return `Tap the link in bio now for a free consultation so we can ${goal}.`;
+  }
+
+  if (normalized.includes('click below')) {
+    return `Click below now for a free consultation so we can ${goal}.`;
+  }
+
+  if (normalized.startsWith('call now')) {
+    return `${cta}. Reach out now for a free consultation so we can ${goal}.`;
+  }
+
+  const shortWordCount = normalized
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
+  if (shortWordCount <= 4) {
+    return `${cta}. Reach out now for a free consultation so we can ${goal}.`;
+  }
+
+  return cta;
 }
 
 async function uploadSelfieAssets(selfieUrls: string[]): Promise<UploadedSelfie[]> {
@@ -201,11 +391,34 @@ async function extractAttorneyVoiceTrack(
   if (!fs.existsSync(localPath)) return undefined;
 
   try {
-    return await extractAudioTrack(localPath, outputDir);
+    const rawTrack = await extractAudioTrack(localPath, outputDir);
+    return await cleanSpeechTrack(rawTrack, outputDir);
   } catch (err) {
     console.warn('[audio] Failed to extract audio from attorney video:', err);
     return undefined;
   }
+}
+
+function preparePlanForAttorneyFeature(plan: AdPlan, hasAttorneyVideo: boolean): AdPlan {
+  if (!hasAttorneyVideo) return plan;
+
+  const scenes = plan.scenes.map((scene) => {
+    if (scene.primitive === 'attorney_direct') {
+      return { ...scene, videoSource: 'selfie' as const };
+    }
+    return scene;
+  });
+
+  const hasAttorneyScene = scenes.some((scene) => scene.primitive === 'attorney_direct');
+  if (!hasAttorneyScene && plan.formatType === 'attorney_direct' && scenes[0]) {
+    scenes[0] = { ...scenes[0], videoSource: 'selfie' as const };
+  }
+
+  return { ...plan, scenes };
+}
+
+function buildAttorneyCleanupPrompt(basePrompt: string): string {
+  return `${basePrompt} Preserve the attorney's real identity and natural speaking performance. Stabilize handheld shake, reduce noise/grain, improve lighting balance, and apply premium cinematic color grading while keeping skin tones realistic. Keep mouth movement natural and avoid face warping or uncanny artifacts.`;
 }
 
 // Bundled background audio tracks (royalty-free)
@@ -222,6 +435,12 @@ app.use(express.json({ limit: '50mb' }));
 app.use('/output', express.static(OUTPUT_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/audio', express.static(AUDIO_DIR));
+
+// Serve built frontend in production
+const DIST_DIR = path.join(ROOT, 'dist');
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+}
 
 const storage = multer.diskStorage({
   destination: UPLOADS_DIR,
@@ -281,24 +500,32 @@ app.post('/api/generate', async (req, res) => {
       logoUrl,
       selfieUrl,
       selfieUrls,
+      firmName,
       phoneNumber,
       locality,
       audioTrack,
       audioUrl,
       audioMode,
       layout,
+      captionMode,
+      captionStyle,
+      sequentialScenes,
     } = req.body as {
       caseType: string;
       overrides?: SceneOverrides;
       logoUrl?: string;
       selfieUrl?: string;
       selfieUrls?: string[];
+      firmName?: string;
       phoneNumber?: string;
       locality?: string;
       audioTrack?: string;
       audioUrl?: string;
       audioMode?: AudioMode;
       layout?: VideoLayout;
+      captionMode?: CaptionMode;
+      captionStyle?: CaptionStyle;
+      sequentialScenes?: boolean;
     };
 
     const foundTemplate = templates.find((t) => t.caseType === caseType);
@@ -315,6 +542,8 @@ app.post('/api/generate', async (req, res) => {
     const { aspectRatio } = getLayoutSpec(selectedLayout);
 
     const selectedAudioMode = parseAudioMode(audioMode);
+    const selectedCaptionMode = parseCaptionMode(captionMode);
+    const selectedCaptionStyle = parseCaptionStyle(captionStyle);
 
     const selfiePool = Array.isArray(selfieUrls)
       ? selfieUrls.filter(Boolean)
@@ -405,7 +634,8 @@ app.post('/api/generate', async (req, res) => {
       }
 
       const composedPath = path.join(jobDir, `scene_${i}_composed.mp4`);
-      const textOverlays = overlayText
+      const shouldBurnSceneText = selectedCaptionMode !== 'remotion-word';
+      const textOverlays = shouldBurnSceneText && overlayText
         ? [
             {
               text: overlayText,
@@ -440,7 +670,14 @@ app.post('/api/generate', async (req, res) => {
       );
     }
 
-    await Promise.all(tmpl.scenes.map((_, i) => processScene(i)));
+    const shouldGenerateSequentially = sequentialScenes !== false;
+    if (shouldGenerateSequentially) {
+      for (let i = 0; i < tmpl.scenes.length; i++) {
+        await processScene(i);
+      }
+    } else {
+      await Promise.all(tmpl.scenes.map((_, i) => processScene(i)));
+    }
 
     const missingClipIndex = composedClips.findIndex((p) => !p || !fs.existsSync(p));
     if (missingClipIndex !== -1) {
@@ -479,6 +716,7 @@ app.post('/api/generate', async (req, res) => {
       shouldLoopAudio = false;
       audioVolume = 1;
       fadeOutSeconds = 0;
+      const totalDurationSeconds = tmpl.scenes.reduce((sum, s) => sum + s.duration, 0);
 
       if (audioUrl) {
         audioSource = normalizePublicPath(audioUrl);
@@ -506,11 +744,14 @@ app.post('/api/generate', async (req, res) => {
 
         if (!audioSource) {
           const voiceStyle: NarrationVoice = trackId === 'narration-male' ? 'male' : 'female';
-          const narrationScript = buildNarrationScript(
-            tmpl,
-            overrides,
-            locality,
-            phoneNumber
+          const narrationScript = fitNarrationScriptToDuration(
+            buildNarrationScript(
+              tmpl,
+              overrides,
+              locality,
+              phoneNumber
+            ),
+            totalDurationSeconds
           );
           res.write(
             `data: ${JSON.stringify({
@@ -538,10 +779,38 @@ app.post('/api/generate', async (req, res) => {
       finalPath = reelPath;
     }
 
+    if (selectedCaptionMode === 'remotion-word') {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'status',
+          message: 'Applying Remotion animated word captions...',
+        })}\n\n`
+      );
+      try {
+        finalPath = await applyRemotionWordCaptions({
+          inputVideoPath: finalPath,
+          outputDir: jobDir,
+          style: selectedCaptionStyle,
+          projectDir: REMOTION_TIKTOK_DIR,
+          entityName: firmName,
+        });
+      } catch (captionErr) {
+        console.warn('[captions] Remotion captioning skipped:', captionErr);
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'status',
+            message: `Captioning skipped: ${String(captionErr)}`,
+          })}\n\n`
+        );
+      }
+    }
+
+    const finalFilename = path.basename(finalPath);
+
     res.write(
       `data: ${JSON.stringify({
         type: 'complete',
-        url: `/output/${jobId}/final_reel.mp4`,
+        url: `/output/${jobId}/${finalFilename}`,
         layout: selectedLayout,
         audioMode: selectedAudioMode,
         scenes: composedClips.map((_, i) => ({
@@ -676,11 +945,17 @@ app.post('/api/generate-from-plan', async (req, res) => {
       logoUrl,
       selfieUrl,
       selfieUrls,
+      captionMode,
+      captionStyle,
+      sequentialScenes,
     } = req.body as {
       plan: AdPlan;
       logoUrl?: string;
       selfieUrl?: string;
       selfieUrls?: string[];
+      captionMode?: CaptionMode;
+      captionStyle?: CaptionStyle;
+      sequentialScenes?: boolean;
     };
 
     if (!plan || !plan.scenes || plan.scenes.length === 0) {
@@ -691,6 +966,8 @@ app.post('/api/generate-from-plan', async (req, res) => {
 
     const selectedLayout: VideoLayout = 'portrait'; // All platforms are 9:16
     const { aspectRatio } = getLayoutSpec(selectedLayout);
+    const selectedCaptionMode = parseCaptionMode(captionMode);
+    const selectedCaptionStyle = parseCaptionStyle(captionStyle);
 
     // Handle selfie uploads
     const selfiePool = Array.isArray(selfieUrls) ? selfieUrls.filter(Boolean) : [];
@@ -701,6 +978,8 @@ app.post('/api/generate-from-plan', async (req, res) => {
       res.write(`data: ${JSON.stringify({ type: 'status', message: 'Uploading attorney references...' })}\n\n`);
       uploadedSelfies = await uploadSelfieAssets(selfiePool);
     }
+    const hasAttorneyVideo = uploadedSelfies.some((asset) => asset.isVideo);
+    const effectivePlan = preparePlanForAttorneyFeature(plan, hasAttorneyVideo);
 
     const selfieImageRefs = uploadedSelfies
       .filter((asset) => !asset.isVideo)
@@ -711,30 +990,43 @@ app.post('/api/generate-from-plan', async (req, res) => {
     fs.mkdirSync(jobDir, { recursive: true });
 
     // Save the plan for reference
-    fs.writeFileSync(path.join(jobDir, 'plan.json'), JSON.stringify(plan, null, 2));
+    fs.writeFileSync(path.join(jobDir, 'plan.json'), JSON.stringify(effectivePlan, null, 2));
 
     res.write(`data: ${JSON.stringify({
       type: 'status',
-      message: `Generating ${plan.formatType} ad for ${plan.caseType} (${plan.platform}, ${plan.totalDuration}s)...`,
+      message: `Generating ${effectivePlan.formatType} ad for ${effectivePlan.caseType} (${effectivePlan.platform}, ${effectivePlan.totalDuration}s)...`,
+    })}\n\n`);
+
+    const shouldGenerateSequentially = sequentialScenes !== false;
+    res.write(`data: ${JSON.stringify({
+      type: 'status',
+      message: shouldGenerateSequentially
+        ? 'Generating scenes sequentially for stronger visual continuity...'
+        : 'Generating scenes in parallel for speed...',
     })}\n\n`);
 
     // Generate each scene clip
-    const composedClips: string[] = new Array(plan.scenes.length);
+    const composedClips: string[] = new Array(effectivePlan.scenes.length);
 
     async function processPlanScene(i: number) {
-      const scene = plan.scenes[i];
-      const prompt = replacePlaceholders(scene.visualPrompt, {
-        locality: plan.locality,
-        phoneNumber: plan.phoneNumber,
-      });
+      const scene = effectivePlan.scenes[i];
+      const prompt = buildPlanScenePrompt(effectivePlan, i);
 
       let generatedPath: string;
 
       if (scene.videoSource === 'selfie' && uploadedSelfies.length > 0) {
-        const asset = uploadedSelfies[i % uploadedSelfies.length];
+        const attorneyVideoAsset = uploadedSelfies.find((asset) => asset.isVideo);
+        const asset =
+          scene.primitive === 'attorney_direct' && attorneyVideoAsset
+            ? attorneyVideoAsset
+            : uploadedSelfies[i % uploadedSelfies.length];
         if (asset.isVideo) {
+          const editPrompt =
+            scene.primitive === 'attorney_direct'
+              ? buildAttorneyCleanupPrompt(prompt)
+              : prompt;
           const result = await editVideo(
-            { prompt, videoUrl: asset.publicUrl, aspectRatio, resolution: '720p' },
+            { prompt: editPrompt, videoUrl: asset.publicUrl, aspectRatio, resolution: '720p' },
             jobDir
           );
           generatedPath = result.filePath;
@@ -763,19 +1055,20 @@ app.post('/api/generate-from-plan', async (req, res) => {
       // Compose with text overlay
       const composedPath = path.join(jobDir, `scene_${i}_composed.mp4`);
       const overlayText = scene.textOverlay
-        ? replacePlaceholders(scene.textOverlay, { locality: plan.locality, phoneNumber: plan.phoneNumber })
+        ? replacePlaceholders(scene.textOverlay, { locality: effectivePlan.locality, phoneNumber: effectivePlan.phoneNumber })
         : undefined;
       const ctaText = scene.ctaText
-        ? replacePlaceholders(scene.ctaText, { locality: plan.locality, phoneNumber: plan.phoneNumber })
+        ? replacePlaceholders(scene.ctaText, { locality: effectivePlan.locality, phoneNumber: effectivePlan.phoneNumber })
         : undefined;
 
-      const textOverlays = overlayText
+      const shouldBurnSceneText = selectedCaptionMode !== 'remotion-word';
+      const textOverlays = shouldBurnSceneText && overlayText
         ? [{ text: overlayText, position: scene.overlayPosition }]
         : [];
 
       const logoPath = logoUrl ? normalizePublicPath(logoUrl) : undefined;
       const logoScale = scene.showLogo ? 1.7 : 1;
-      const isLastScene = i === plan.scenes.length - 1;
+      const isLastScene = i === effectivePlan.scenes.length - 1;
 
       await composeScene({
         inputPath: generatedPath,
@@ -785,7 +1078,7 @@ app.post('/api/generate-from-plan', async (req, res) => {
         logoPath: scene.showLogo ? logoPath : undefined,
         logoScale,
         ctaText,
-        disclaimer: isLastScene ? plan.disclaimer : undefined,
+        disclaimer: isLastScene ? effectivePlan.disclaimer : undefined,
         layout: selectedLayout,
       });
 
@@ -800,8 +1093,13 @@ app.post('/api/generate-from-plan', async (req, res) => {
       })}\n\n`);
     }
 
-    // Generate scenes in parallel
-    await Promise.all(plan.scenes.map((_, i) => processPlanScene(i)));
+    if (shouldGenerateSequentially) {
+      for (let i = 0; i < effectivePlan.scenes.length; i++) {
+        await processPlanScene(i);
+      }
+    } else {
+      await Promise.all(effectivePlan.scenes.map((_, i) => processPlanScene(i)));
+    }
 
     const missingClipIndex = composedClips.findIndex((p) => !p || !fs.existsSync(p));
     if (missingClipIndex !== -1) {
@@ -816,32 +1114,52 @@ app.post('/api/generate-from-plan', async (req, res) => {
     let finalPath: string;
     let audioFilePath: string | undefined;
 
-    if (plan.audio.source === 'elevenlabs' && plan.audio.script && plan.audio.voiceId) {
+    const sceneSyncedScript = buildSceneSyncedPlanNarration(effectivePlan);
+    const narrationScript = fitNarrationScriptToDuration(
+      sceneSyncedScript || effectivePlan.audio.script || '',
+      effectivePlan.totalDuration
+    );
+
+    const hasAttorneyDirectScene = effectivePlan.scenes.some((scene) => scene.primitive === 'attorney_direct');
+    const shouldPreferAttorneyVoice =
+      hasAttorneyVideo &&
+      hasAttorneyDirectScene &&
+      effectivePlan.audio.source !== 'silent';
+
+    if (shouldPreferAttorneyVoice) {
       res.write(`data: ${JSON.stringify({
         type: 'status',
-        message: `Generating narration with ${plan.audio.voiceName || plan.audio.voiceId}...`,
+        message: 'Using uploaded attorney voice with AI cleanup...',
+      })}\n\n`);
+      audioFilePath = await extractAttorneyVoiceTrack(uploadedSelfies, jobDir);
+    }
+
+    if (!audioFilePath && effectivePlan.audio.source === 'elevenlabs' && narrationScript && effectivePlan.audio.voiceId) {
+      res.write(`data: ${JSON.stringify({
+        type: 'status',
+        message: `Generating narration with ${effectivePlan.audio.voiceName || effectivePlan.audio.voiceId}...`,
       })}\n\n`);
 
       audioFilePath = await generateNarration({
-        script: plan.audio.script,
-        voiceId: plan.audio.voiceId,
+        script: narrationScript,
+        voiceId: effectivePlan.audio.voiceId,
         outputDir: jobDir,
       });
-    } else if (plan.audio.source === 'music_only' && plan.audio.musicMood) {
+    } else if (!audioFilePath && effectivePlan.audio.source === 'music_only' && effectivePlan.audio.musicMood) {
       res.write(`data: ${JSON.stringify({
         type: 'status',
         message: 'Generating background music...',
       })}\n\n`);
 
-      const musicPrompt = MUSIC_PROMPTS[plan.audio.musicMood] || MUSIC_PROMPTS.dramatic;
-      audioFilePath = await generateMusic(musicPrompt, plan.totalDuration * 1000, jobDir);
+      const musicPrompt = MUSIC_PROMPTS[effectivePlan.audio.musicMood] || MUSIC_PROMPTS.dramatic;
+      audioFilePath = await generateMusic(musicPrompt, effectivePlan.totalDuration * 1000, jobDir);
     }
     // For 'grok' audio source, the video already has audio from Grok native generation
     // For 'silent', no audio needed
 
     if (audioFilePath && fs.existsSync(audioFilePath)) {
       finalPath = path.join(jobDir, 'final_reel.mp4');
-      const isNarration = plan.audio.source === 'elevenlabs';
+      const isNarration = effectivePlan.audio.source === 'elevenlabs' || shouldPreferAttorneyVoice;
 
       await mixAudio(concatPath, audioFilePath, finalPath, {
         loop: !isNarration,
@@ -856,20 +1174,44 @@ app.post('/api/generate-from-plan', async (req, res) => {
       finalPath = reelPath;
     }
 
+    if (selectedCaptionMode === 'remotion-word') {
+      res.write(`data: ${JSON.stringify({
+        type: 'status',
+        message: 'Applying Remotion animated word captions...',
+      })}\n\n`);
+      try {
+        finalPath = await applyRemotionWordCaptions({
+          inputVideoPath: finalPath,
+          outputDir: jobDir,
+          style: selectedCaptionStyle,
+          projectDir: REMOTION_TIKTOK_DIR,
+          entityName: effectivePlan.firmName,
+        });
+      } catch (captionErr) {
+        console.warn('[captions] Remotion captioning skipped:', captionErr);
+        res.write(`data: ${JSON.stringify({
+          type: 'status',
+          message: `Captioning skipped: ${String(captionErr)}`,
+        })}\n\n`);
+      }
+    }
+
+    const finalFilename = path.basename(finalPath);
+
     res.write(`data: ${JSON.stringify({
       type: 'complete',
-      url: `/output/${jobId}/final_reel.mp4`,
+      url: `/output/${jobId}/${finalFilename}`,
       plan: {
-        id: plan.id,
-        formatType: plan.formatType,
-        caseType: plan.caseType,
-        platform: plan.platform,
-        audienceTemp: plan.audienceTemp,
-        tone: plan.tone,
-        totalDuration: plan.totalDuration,
-        clipStructure: plan.clipStructure,
-        audioSource: plan.audio.source,
-        voiceName: plan.audio.voiceName,
+        id: effectivePlan.id,
+        formatType: effectivePlan.formatType,
+        caseType: effectivePlan.caseType,
+        platform: effectivePlan.platform,
+        audienceTemp: effectivePlan.audienceTemp,
+        tone: effectivePlan.tone,
+        totalDuration: effectivePlan.totalDuration,
+        clipStructure: effectivePlan.clipStructure,
+        audioSource: shouldPreferAttorneyVoice ? 'attorney_video_voice' : effectivePlan.audio.source,
+        voiceName: shouldPreferAttorneyVoice ? 'Uploaded Attorney Voice' : effectivePlan.audio.voiceName,
       },
       layout: selectedLayout,
       scenes: composedClips.map((_, i) => ({
@@ -881,6 +1223,16 @@ app.post('/api/generate-from-plan', async (req, res) => {
     console.error('Generate-from-plan error:', err);
     res.write(`data: ${JSON.stringify({ type: 'error', details: String(err) })}\n\n`);
     res.end();
+  }
+});
+
+// SPA catch-all: serve index.html for any non-API route
+app.get('{*path}', (_req, res) => {
+  const indexPath = path.join(DIST_DIR, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Not found');
   }
 });
 
